@@ -587,14 +587,24 @@
         }
       }
 
-      if (!mountActiveStationSync(sIdx)) return;
+      // Clock-hold barrier: NEVER skip past an unloaded station! Hold right at its start
+      // (`stationOffsets[sIdx].start`) until streaming finishes, then resume smoothly from 0.00s.
+      if (!mountActiveStationSync(sIdx)) {
+        if (manualOverrideFilmTime === null && !isPaused) {
+          filmOffsetSec = stationOffsets[sIdx].start;
+          clockAnchorMs = performance.now();
+        }
+        if (!lastVeilVisible) { veilEl.style.visibility = 'visible'; lastVeilVisible = true; }
+        veilEl.style.opacity = '0.94';
+        return;
+      }
 
       const st = streamMgr.getStationSync(sIdx);
       const off = stationOffsets[sIdx];
       const tLocal = THREE.MathUtils.clamp(tFilm - off.start, 0.0, st.duration);
 
-      // Deferred background prefetch only for next sequential station (no loop wrap to station 1!)
-      if (prefetchedForStation !== sIdx && sIdx + 1 < streamMgr.count && tLocal > 2.8 && manualOverrideFilmTime === null) {
+      // Start background prefetch early (tLocal > 0.8s) so heavy stations like Zhangjiajie finish in time!
+      if (prefetchedForStation !== sIdx && sIdx + 1 < streamMgr.count && tLocal > 0.8 && manualOverrideFilmTime === null) {
         prefetchedForStation = sIdx;
         streamMgr.prefetchNext(sIdx);
       }

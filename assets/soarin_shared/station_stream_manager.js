@@ -38,28 +38,31 @@ export function createStationStreamManager({
     const entry = stationManifest[i];
     const isBg = Boolean(opts.background);
     inflight[i] = (async () => {
-      if (isBg) await yieldFrame();
-      const mod = await import(entry.modulePath);
-      if (isBg) await yieldFrame();
-      const st = await mod.createStation(renderer);
-      await applyStationHdPbrUpgrade(i + 1, st.group, renderer);
-      (st.omniVideos || []).forEach((v) => {
-        try { v.pause(); } catch (e) {}
-      });
-      // Pre-compile GLSL shaders asynchronously in background before station transition!
-      if (isBg && typeof renderer.compileAsync === 'function') {
-        await yieldFrame();
-        try {
-          st.group.visible = true;
-          await renderer.compileAsync(st.group, camera, scene);
-        } catch (e) {
-          // Safe fallback if compileAsync encounters custom uniforms not yet bound
+      try {
+        if (isBg) await yieldFrame();
+        const mod = await import(entry.modulePath);
+        if (isBg) await yieldFrame();
+        const st = await mod.createStation(renderer);
+        await applyStationHdPbrUpgrade(i + 1, st.group, renderer);
+        (st.omniVideos || []).forEach((v) => {
+          try { v.pause(); } catch (e) {}
+        });
+        // Pre-compile GLSL shaders asynchronously in background before station transition!
+        if (isBg && typeof renderer.compileAsync === 'function') {
+          await yieldFrame();
+          try {
+            st.group.visible = true;
+            await renderer.compileAsync(st.group, camera, scene);
+          } catch (e) {
+            // Safe fallback if compileAsync encounters custom uniforms not yet bound
+          }
         }
+        st.group.visible = false;
+        loaded[i] = st;
+        return st;
+      } finally {
+        inflight[i] = null;
       }
-      st.group.visible = false;
-      loaded[i] = st;
-      inflight[i] = null;
-      return st;
     })();
 
     return inflight[i];
