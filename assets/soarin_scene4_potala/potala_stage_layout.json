@@ -1,0 +1,102 @@
+{
+  "palace_center_gltf": [
+    -28.7945,
+    54.0,
+    -35.6813
+  ],
+  "white_palace_front_gltf": [
+    -16.6615,
+    40.0,
+    -24.5777
+  ],
+  "red_palace_front_gltf": [
+    -25.0388,
+    54.0,
+    -28.6177
+  ],
+  "golden_roofs_gltf": {
+    "GoldenRoof_1_Central5thDalai": [
+      -28.6537,
+      71.01,
+      -35.4164
+    ],
+    "GoldenRoof_2_West13thDalai": [
+      -39.7185,
+      66.96,
+      -30.6657
+    ],
+    "GoldenRoof_3_East7thDalai": [
+      -17.1754,
+      65.56,
+      -41.5195
+    ],
+    "GoldenRoof_4_FrontSacredHall": [
+      -26.0246,
+      69.11,
+      -30.4719
+    ],
+    "GoldenRoof_5_SunshineSanctum": [
+      -43.8335,
+      59.56,
+      -23.4944
+    ]
+  },
+  "stupas_gltf": {
+    "Stupa_1_HeroLeft": [
+      -10.5,
+      31.422,
+      24.0
+    ],
+    "Stupa_2_MidRidge": [
+      -2.5,
+      27.499,
+      18.5
+    ],
+    "Stupa_3_RightRidge": [
+      4.2,
+      26.492,
+      23.0
+    ]
+  },
+  "pass_entry_flags_top_gltf": [
+    29.2,
+    56.538,
+    52.5
+  ],
+  "promontory_flags_top_gltf": [
+    -23.2,
+    43.695,
+    16.2
+  ],
+  "zigzag_stairs_gltf": [
+    [
+      -13.4527,
+      15.8,
+      -3.6324
+    ],
+    [
+      8.6317,
+      21.8,
+      -23.8692
+    ],
+    [
+      -23.679,
+      29.2,
+      -15.4101
+    ],
+    [
+      -4.3661,
+      34.4,
+      -30.2092
+    ],
+    [
+      -1.1152,
+      38.6,
+      -37.9404
+    ]
+  ],
+  "prayer_flag_strings": 24,
+  "prayer_flag_count": 668,
+  "recessed_tibetan_windows": 392,
+  "total_tris": 227952
+}

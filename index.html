@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pelican Over China — Gemini 4 Hydrogen + Blender</title>
+  <style>
+    :root {
+      --gold: #f6ce7b;
+      --gold-bright: #ffe8ad;
+      --gold-soft: rgba(246, 206, 123, 0.36);
+      --glass: rgba(10, 15, 26, 0.74);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #070b14;
+      font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+      color: #fbf5e8;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    /* Seamless Per-Station Cloud / Mist / Twilight Wipe Veil */
+    #transition-veil {
+      position: fixed; inset: 0; pointer-events: none; z-index: 8;
+      background: radial-gradient(circle at 52% 46%, #ffffff 0%, #f8dfab 68%, #dfb26a 100%);
+      opacity: 0;
+      will-change: opacity;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #stream-toast {
+      padding: 8px 20px; border-radius: 999px;
+      background: rgba(10, 15, 26, 0.76);
+      border: 1px solid var(--gold-soft);
+      color: var(--gold-bright); font-size: 13px; letter-spacing: 0.10em;
+      backdrop-filter: blur(10px);
+      opacity: 0; transition: opacity 0.2s ease;
+    }
+    #stream-toast.show { opacity: 1; }
+
+    /* Subtle Cinema Vignette */
+    #dome-vignette {
+      position: fixed; inset: 0; pointer-events: none; z-index: 6;
+      background: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 68%, rgba(4,8,16,0.34) 100%);
+    }
+    body.clean-qa #dome-vignette { opacity: 0 !important; }
+
+    /* Loading Screen — Minimalist English Cover + Cycling Cartoon Pelican */
+    #loader {
+      position: fixed; inset: 0; z-index: 40;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 50% 42%, #1e3154 0%, #0d1424 66%, #060911 100%);
+      transition: opacity 0.65s ease, visibility 0.65s;
+    }
+    #loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .ld-credit {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em;
+      color: rgba(246, 214, 148, 0.82); margin-bottom: 10px;
+    }
+    .ld-title {
+      font-family: "Noto Serif SC", Georgia, "Times New Roman", serif;
+      font-size: clamp(26px, 3.6vw, 42px); font-weight: 600; letter-spacing: 0.22em;
+      color: #fff6df; margin-bottom: 34px;
+      text-shadow: 0 4px 24px rgba(0, 0, 0, 0.65);
+    }
+    .ld-track-stage {
+      position: relative;
+      width: min(440px, 78vw);
+      padding-top: 96px;
+      margin-bottom: 14px;
+    }
+    .ld-pelican-rider {
+      position: absolute;
+      top: 0; left: 0%;
+      width: 96px; height: 94px;
+      transform: translateX(-50%);
+      transition: left 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: none;
+    }
+    .ld-pelican-rider img {
+      width: 100%; height: 100%; object-fit: contain; display: block;
+      filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+      animation: pelicanCycleBob 0.46s ease-in-out infinite alternate;
+      transform-origin: 50% 88%;
+    }
+    @keyframes pelicanCycleBob {
+      0%   { transform: translateY(0px) rotate(-1.8deg) scaleY(1.00); }
+      100% { transform: translateY(-4px) rotate(1.8deg) scaleY(0.985); }
+    }
+    .ld-bar-wrap {
+      width: 100%; height: 3px; border-radius: 99px;
+      background: rgba(255, 240, 205, 0.14); overflow: hidden;
+    }
+    .ld-bar-fill {
+      width: 0%; height: 100%;
+      background: linear-gradient(90deg, #d89b3c, #ffe8ad);
+      box-shadow: 0 0 10px rgba(255, 232, 173, 0.65);
+      transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .ld-pct {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.18em;
+      color: rgba(246, 218, 162, 0.78);
+    }
+
+    /* Cinema HUD — Option A Delicate Chamfered Gold-Hairline Plaque */
+    #cinema-ui {
+      position: fixed; inset: 0; pointer-events: none; z-index: 12;
+      transition: opacity 0.35s ease;
+    }
+    body.clean-qa #cinema-ui { opacity: 0 !important; }
+
+    .top-plaque {
+      position: absolute; top: 22px; left: 26px;
+      display: inline-flex; flex-direction: column; align-items: stretch; gap: 4px;
+      padding: 8px 14px 9px 15px;
+      background: linear-gradient(135deg, rgba(10, 15, 24, 0.56), rgba(10, 15, 24, 0.36));
+      clip-path: polygon(9px 0%, calc(100% - 9px) 0%, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0% calc(100% - 9px), 0% 9px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+      pointer-events: auto;
+    }
+    .top-plaque .frame-svg {
+      position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+    }
+    .top-plaque .tech-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-family: "Noto Sans SC", "Inter", system-ui, sans-serif;
+      font-size: 9.5px; font-weight: 600; letter-spacing: 0.05em;
+      color: rgba(246, 214, 148, 0.88);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .top-plaque .bottom-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .top-plaque .place-name {
+      font-family: "Noto Serif SC", "Songti SC", "PingFang SC", serif;
+      font-size: 18px; font-weight: 600; letter-spacing: 0.12em;
+      color: #fff9ec;
+      text-shadow: 0 1px 8px rgba(0, 0, 0, 0.68);
+      line-height: 1.18;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .top-plaque .btn-row {
+      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    }
+    .hud-icon-btn {
+      cursor: pointer;
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1px solid rgba(246, 210, 134, 0.48);
+      background: rgba(12, 18, 30, 0.46);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: #fce8bc;
+      transition: border-color 0.2s ease, background 0.2s ease, transform 0.18s ease, color 0.2s ease;
+    }
+    .hud-icon-btn:hover {
+      border-color: var(--gold-bright);
+      background: rgba(246, 206, 123, 0.22);
+      transform: translateY(-1px);
+    }
+    .hud-icon-btn.active {
+      border-color: var(--gold-bright);
+      background: rgba(246, 206, 123, 0.24);
+      box-shadow: 0 0 12px rgba(246, 206, 123, 0.26);
+      color: #fff6de;
+    }
+    .hud-icon-btn.muted {
+      border-color: rgba(200, 212, 228, 0.30);
+      color: rgba(205, 215, 230, 0.62);
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./lam_chat/node_modules/three/build/three.module.js",
+      "three/addons/": "./lam_chat/node_modules/three/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="loader">
+    <div class="ld-credit">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 1 C12.8 7.6 16.4 11.2 23 12 C16.4 12.8 12.8 16.4 12 23 C11.2 16.4 7.6 12.8 1 12 C7.6 11.2 11.2 7.6 12 1 Z" fill="#8fd3ff" stroke="#f8d88c" stroke-width="1.4"/>
+      </svg>
+      <span>Made by Gemini 4 Hydrogen + Blender</span>
+    </div>
+    <div class="ld-title">PELICAN OVER CHINA</div>
+    <div class="ld-track-stage">
+      <div class="ld-pelican-rider" id="ld-pelican-rider">
+        <img src="./assets/soarin_shared/pelican_loading_cartoon.png" alt="Pelican Cycling" />
+      </div>
+      <div class="ld-bar-wrap"><div class="ld-bar-fill" id="ld-bar"></div></div>
+    </div>
+    <div class="ld-pct" id="ld-pct">0%</div>
+  </div>
+
+  <div id="dome-vignette"></div>
+  <div id="transition-veil"><div id="stream-toast">正在流式加载下一站高精度 3D 舞台...</div></div>
+
+  <div id="cinema-ui">
+    <div class="top-plaque">
+      <svg class="frame-svg" viewBox="0 0 240 62" preserveAspectRatio="none" aria-hidden="true">
+        <polygon points="9,1 231,1 239,9 239,53 231,61 9,61 1,53 1,9"
+                 fill="none" stroke="rgba(246,208,128,0.62)" stroke-width="1.15" vector-effect="non-scaling-stroke"/>
+        <path d="M4,15 L4,10 L10,4 L18,4 M222,4 L230,4 L236,10 L236,15 M236,47 L236,52 L230,58 L222,58 M18,58 L10,58 L4,52 L4,47"
+              fill="none" stroke="rgba(255,234,182,0.85)" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="tech-tag">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 1 C12.8 7.6 16.4 11.2 23 12 C16.4 12.8 12.8 16.4 12 23 C11.2 16.4 7.6 12.8 1 12 C7.6 11.2 11.2 7.6 12 1 Z" fill="#8fd3ff" stroke="#f8d88c" stroke-width="1.4"/>
+        </svg>
+        <span>Made by Gemini 4 Hydrogen + Blender</span>
+      </div>
+      <div class="bottom-row">
+        <div class="place-name" id="ui-title">万里长城</div>
+        <div class="btn-row">
+          <button id="play-btn" class="hud-icon-btn" type="button" aria-label="暂停或继续播放" title="暂停 / 继续">
+            <svg id="play-icon-svg" width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <rect x="3.2" y="2.5" width="3.2" height="11" rx="1"/>
+              <rect x="9.6" y="2.5" width="3.2" height="11" rx="1"/>
+            </svg>
+          </button>
+          <button id="sound-btn" class="hud-icon-btn muted" type="button" aria-label="音乐开关" title="开启 / 关闭音乐">
+            <svg id="sound-icon-svg" width="12" height="12" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6.5 13.2V4.5L14.5 3V11.8"/>
+              <circle cx="4.7" cy="13.4" r="2.0" fill="currentColor" stroke="none"/>
+              <circle cx="12.7" cy="12.0" r="2.0" fill="currentColor" stroke="none"/>
+              <line x1="2.5" y1="2.5" x2="15.5" y2="15.5" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { loadPelicanHeroRig } from './assets/soarin_shared/pelican_hero_rig.js';
+    import { createStationStreamManager } from './assets/soarin_shared/station_stream_manager.js';
+
+    const STATION_MANIFEST = [
+      { id: 1, slug: 'great_wall',     nameZh: '万里长城',     placeName: '万里长城',     titleZh: '万里长城 · 振铃破云日出',           duration: 18.0, modulePath: '../soarin_scene1_gw/station_module.js' },
+      { id: 2, slug: 'zhangjiajie',    nameZh: '张家界奇峰',   placeName: '张家界武陵源', titleZh: '张家界武陵源 · 奇峰飞瀑穿行',       duration: 16.0, modulePath: '../soarin_scene2_zhangjiajie/station_module.js' },
+      { id: 3, slug: 'guilin',         nameZh: '桂林漓江',     placeName: '桂林漓江',     titleZh: '桂林漓江 · 车轮掠波激起水花',       duration: 16.0, modulePath: '../soarin_scene3_guilin/station_module.js' },
+      { id: 4, slug: 'potala',         nameZh: '西藏布达拉宫', placeName: '西藏布达拉宫', titleZh: '西藏布达拉宫 · 经幡雪山环形腾空',   duration: 17.0, modulePath: '../soarin_scene4_potala/station_module.js' },
+      { id: 5, slug: 'forbidden_city', nameZh: '北京故宫',     placeName: '北京紫禁城',   titleZh: '北京紫禁城 · 御道骑行飞越金顶',     duration: 16.0, modulePath: '../soarin_scene5_forbiddencity/station_module.js' },
+      { id: 6, slug: 'dunhuang',       nameZh: '敦煌月牙泉',   placeName: '敦煌月牙泉',   titleZh: '敦煌月牙泉 · 大漠落日远景环绕',     duration: 16.0, modulePath: '../soarin_scene6_dunhuang/station_module.js' },
+      { id: 7, slug: 'hongyadong',     nameZh: '重庆洪崖洞',   placeName: '重庆洪崖洞',   titleZh: '重庆洪崖洞 · 千厮门桥骑行江湾夜色', duration: 18.0, modulePath: '../soarin_scene7_hongyadong/station_module.js' },
+      { id: 8, slug: 'shanghai',       nameZh: '上海外滩烟花', placeName: '上海外滩',     titleZh: '上海陆家嘴外滩 · 漫天烟花振铃终章', duration: 21.0, modulePath: '../soarin_scene8_shanghai/station_module.js' },
+    ];
+
+    const params = new URLSearchParams(location.search);
+    const isCleanQA = params.get('clean') === '1';
+    if (isCleanQA) document.body.classList.add('clean-qa');
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: isCleanQA,
+      stencil: false,
+    });
+    renderer.setPixelRatio(isCleanQA ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0xecdac2, 0.0024);
+    const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.12, 1400);
+
+    const ldBar = document.getElementById('ld-bar');
+    const ldRider = document.getElementById('ld-pelican-rider');
+    const ldPct = document.getElementById('ld-pct');
+    const setLoaderProgress = (pct) => {
+      const p = Math.max(0, Math.min(100, pct));
+      ldBar.style.width = `${p}%`;
+      ldRider.style.left = `${p}%`;
+      ldPct.textContent = `${Math.round(p)}%`;
+    };
+
+    setLoaderProgress(28);
+    const pelicanRig = await loadPelicanHeroRig(renderer);
+    scene.add(pelicanRig.root);
+    setLoaderProgress(58);
+
+    const streamMgr = createStationStreamManager({
+      renderer,
+      scene,
+      camera,
+      pelicanRig,
+      stationManifest: STATION_MANIFEST,
+    });
+
+    const { totalFilmDuration, stationOffsets } = streamMgr;
+
+    // Determine initial station (defaults to Station 1 for instant ~1.5s boot!)
+    let initStationIdx = 0;
+    let initLocalSec = 0.0;
+    let manualOverrideFilmTime = params.has('filmT') ? parseFloat(params.get('filmT')) : null;
+    if (params.has('station')) {
+      initStationIdx = Math.max(0, Math.min(7, parseInt(params.get('station'), 10) - 1));
+      initLocalSec = params.has('t') ? parseFloat(params.get('t')) : 2.0;
+      manualOverrideFilmTime = stationOffsets[initStationIdx].start + initLocalSec;
+    } else if (manualOverrideFilmTime !== null) {
+      const tw = ((manualOverrideFilmTime % totalFilmDuration) + totalFilmDuration) % totalFilmDuration;
+      for (let i = 0; i < stationOffsets.length; i++) {
+        if (tw >= stationOffsets[i].start && tw < stationOffsets[i].end) {
+          initStationIdx = i;
+          break;
+        }
+      }
+    }
+
+    await streamMgr.ensureStationLoaded(initStationIdx);
+    setLoaderProgress(100);
+
+    let filmOffsetSec = stationOffsets[initStationIdx].start + initLocalSec;
+    let clockAnchorMs = performance.now();
+    let isPaused = false;
+    let isFilmEnded = false;
+    let pausedFilmSec = filmOffsetSec;
+
+    // =========================================================================
+    // PROCEDURAL WEBAUDIO BRASS BICYCLE BELL + 8-STATION SYMPHONIC HARMONIC PAD
+    // =========================================================================
+    const STATION_CHORDS = [
+      [146.83, 220.00, 293.66, 369.99, 440.00],
+      [174.61, 261.63, 329.63, 392.00, 493.88],
+      [196.00, 293.66, 329.63, 392.00, 493.88],
+      [130.81, 196.00, 293.66, 392.00, 523.25],
+      [233.08, 349.23, 440.00, 523.25, 587.33],
+      [220.00, 329.63, 392.00, 493.88, 523.25],
+      [155.56, 233.08, 293.66, 349.23, 466.16],
+      [261.63, 329.63, 392.00, 493.88, 587.33],
+    ];
+
+    let audioCtx = null;
+    let audioEnabled = false;
+    let padMasterGain = null;
+    let padOscs = [];
+
+    function ringBicycleBell(doubleChime = false) {
+      if (!audioEnabled || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      const strikes = doubleChime ? [0.0, 0.11, 0.34, 0.45] : [0.0, 0.11];
+      strikes.forEach((delay) => {
+        [2480, 3715, 5240].forEach((freq, k) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + delay);
+          gain.gain.setValueAtTime(0.075 / (k + 1), now + delay);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.88);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(now + delay);
+          osc.stop(now + delay + 0.92);
+        });
+      });
+    }
+
+    function updateSymphonicChord(stationIdx) {
+      if (!audioEnabled || !audioCtx || !padOscs.length) return;
+      const freqs = STATION_CHORDS[stationIdx] || STATION_CHORDS[0];
+      const now = audioCtx.currentTime;
+      padOscs.forEach((o, i) => {
+        o.osc.frequency.cancelScheduledValues(now);
+        o.osc.frequency.setTargetAtTime(freqs[i % freqs.length], now, 0.45);
+      });
+    }
+
+    function initSymphonicAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      padMasterGain = audioCtx.createGain();
+      padMasterGain.gain.value = 0.0;
+      const lpFilter = audioCtx.createBiquadFilter();
+      lpFilter.type = 'lowpass';
+      lpFilter.frequency.value = 920;
+      lpFilter.Q.value = 0.7;
+      lpFilter.connect(padMasterGain).connect(audioCtx.destination);
+      const initFreqs = STATION_CHORDS[Math.max(0, currentActiveIdx)];
+      padOscs = initFreqs.map((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = i < 2 ? 'triangle' : 'sine';
+        osc.frequency.value = f;
+        osc.detune.value = (i - 2) * 4.5;
+        g.gain.value = i === 0 ? 0.24 : 0.14;
+        osc.connect(g).connect(lpFilter);
+        osc.start();
+        return { osc, g };
+      });
+    }
+
+    const soundBtn = document.getElementById('sound-btn');
+    const soundIconSvg = document.getElementById('sound-icon-svg');
+    const playBtn = document.getElementById('play-btn');
+    const playIconSvg = document.getElementById('play-icon-svg');
+
+    function setSoundIcon(on) {
+      soundBtn.classList.toggle('active', on);
+      soundBtn.classList.toggle('muted', !on);
+      soundIconSvg.innerHTML = on
+        ? '<path d="M6.5 13.2V4.5L14.5 3V11.8"/><circle cx="4.7" cy="13.4" r="2.0" fill="currentColor" stroke="none"/><circle cx="12.7" cy="12.0" r="2.0" fill="currentColor" stroke="none"/>'
+        : '<path d="M6.5 13.2V4.5L14.5 3V11.8"/><circle cx="4.7" cy="13.4" r="2.0" fill="currentColor" stroke="none"/><circle cx="12.7" cy="12.0" r="2.0" fill="currentColor" stroke="none"/><line x1="2.5" y1="2.5" x2="15.5" y2="15.5" stroke="currentColor" stroke-width="1.6"/>';
+    }
+
+    function setPlayIcon(playing) {
+      playBtn.classList.toggle('active', !playing);
+      playIconSvg.innerHTML = playing
+        ? '<rect x="3.2" y="2.5" width="3.2" height="11" rx="1"/><rect x="9.6" y="2.5" width="3.2" height="11" rx="1"/>'
+        : '<polygon points="4.2,2.4 13.6,8 4.2,13.6"/>';
+    }
+
+    soundBtn.addEventListener('click', () => {
+      initSymphonicAudio();
+      audioCtx.resume();
+      audioEnabled = !audioEnabled;
+      setSoundIcon(audioEnabled);
+      const now = audioCtx.currentTime;
+      padMasterGain.gain.cancelScheduledValues(now);
+      padMasterGain.gain.setTargetAtTime(audioEnabled ? 0.16 : 0.0, now, 0.35);
+      if (audioEnabled) {
+        updateSymphonicChord(Math.max(0, currentActiveIdx));
+        ringBicycleBell(currentActiveIdx === 7);
+      }
+    });
+
+    // Pause-Only In-Place Viewpoint Rotation (rotates current camera yaw/pitch; ZERO translation/move!)
+    const pauseEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+    const pausedCamPos = new THREE.Vector3();
+    let pausedYaw = 0;
+    let pausedPitch = 0;
+    let isDraggingLook = false;
+    let dragLastX = 0;
+    let dragLastY = 0;
+
+    function capturePausedViewpoint() {
+      pausedCamPos.copy(camera.position);
+      pauseEuler.setFromQuaternion(camera.quaternion, 'YXZ');
+      pausedPitch = THREE.MathUtils.clamp(pauseEuler.x, -1.42, 1.42);
+      pausedYaw = pauseEuler.y;
+      renderer.domElement.style.cursor = 'grab';
+    }
+
+    function applyPausedViewpoint() {
+      camera.position.copy(pausedCamPos);
+      pauseEuler.set(pausedPitch, pausedYaw, 0, 'YXZ');
+      camera.quaternion.setFromEuler(pauseEuler);
+    }
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      if (!isPaused || e.button !== 0) return;
+      isDraggingLook = true;
+      dragLastX = e.clientX;
+      dragLastY = e.clientY;
+      renderer.domElement.style.cursor = 'grabbing';
+      try { renderer.domElement.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    renderer.domElement.addEventListener('pointermove', (e) => {
+      if (!isPaused || !isDraggingLook) return;
+      const dx = e.clientX - dragLastX;
+      const dy = e.clientY - dragLastY;
+      dragLastX = e.clientX;
+      dragLastY = e.clientY;
+      pausedYaw += dx * 0.0028;
+      pausedPitch = THREE.MathUtils.clamp(pausedPitch + dy * 0.0024, -1.42, 1.42);
+      applyPausedViewpoint();
+    });
+    const endDragLook = (e) => {
+      if (!isDraggingLook) return;
+      isDraggingLook = false;
+      renderer.domElement.style.cursor = isPaused ? 'grab' : 'default';
+      try { renderer.domElement.releasePointerCapture(e.pointerId); } catch (_) {}
+    };
+    renderer.domElement.addEventListener('pointerup', endDragLook);
+    renderer.domElement.addEventListener('pointercancel', endDragLook);
+
+    playBtn.addEventListener('click', () => {
+      const now = performance.now();
+      if (isFilmEnded) {
+        manualOverrideFilmTime = null;
+        isFilmEnded = false;
+        isPaused = false;
+        isDraggingLook = false;
+        filmOffsetSec = 0.0;
+        pausedFilmSec = 0.0;
+        clockAnchorMs = now;
+        renderer.domElement.style.cursor = 'default';
+        setPlayIcon(true);
+        return;
+      }
+      if (!isPaused) {
+        pausedFilmSec = manualOverrideFilmTime !== null
+          ? manualOverrideFilmTime
+          : Math.min(totalFilmDuration - 0.01, filmOffsetSec + (now - clockAnchorMs) * 0.001);
+        manualOverrideFilmTime = null;
+        capturePausedViewpoint();
+        isPaused = true;
+        setPlayIcon(false);
+      } else {
+        manualOverrideFilmTime = null;
+        filmOffsetSec = pausedFilmSec;
+        clockAnchorMs = now;
+        isPaused = false;
+        isDraggingLook = false;
+        renderer.domElement.style.cursor = 'default';
+        setPlayIcon(true);
+      }
+    });
+
+    const uiTitle = document.getElementById('ui-title');
+    const veilEl = document.getElementById('transition-veil');
+    const smooth01 = (a, b, x) => { const t = THREE.MathUtils.clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        playBtn.click();
+      }
+    });
+
+    let currentActiveIdx = -1;
+
+    function mountActiveStationSync(sIdx) {
+      if (sIdx === currentActiveIdx) return true;
+      const st = streamMgr.getStationSync(sIdx);
+      if (!st) {
+        streamMgr.ensureStationLoaded(sIdx);
+        return false;
+      }
+
+      if (currentActiveIdx >= 0) {
+        const prev = streamMgr.getStationSync(currentActiveIdx);
+        if (prev) {
+          prev.group.visible = false;
+          scene.remove(prev.group);
+          (prev.omniVideos || []).forEach((v) => {
+            try { v.pause(); } catch (e) {}
+          });
+        }
+      }
+
+      st.group.visible = true;
+      scene.add(st.group);
+      (st.omniVideos || []).forEach((v) => {
+        try { v.play().catch(() => {}); } catch (e) {}
+      });
+
+      scene.environment = st.envTexture;
+      scene.environmentIntensity = st.envIntensity ?? 0.85;
+      scene.fog.color.copy(st.fogColor);
+      scene.fog.density = st.fogDensity ?? 0.0022;
+      renderer.toneMappingExposure = st.exposure ?? 1.05;
+      veilEl.style.background = `radial-gradient(circle at 52% 46%, #ffffff 0%, ${st.transitionColor || '#f5d89c'} 72%)`;
+
+      uiTitle.textContent = STATION_MANIFEST[sIdx]?.placeName || st.nameZh;
+      if (currentActiveIdx !== -1) {
+        updateSymphonicChord(sIdx);
+        ringBicycleBell(sIdx === 7);
+      }
+      currentActiveIdx = sIdx;
+
+      const keepIds = sIdx + 1 < streamMgr.count ? [sIdx, sIdx + 1] : [sIdx];
+      streamMgr.recycleDistantStations(keepIds);
+      prefetchedForStation = -1;
+      return true;
+    }
+
+    let prefetchedForStation = -1;
+    let lastVeilVisible = true;
+    let lastBeatText = '';
+
+    function evaluateMasterFilm(tFilmRaw) {
+      const tFilm = THREE.MathUtils.clamp(tFilmRaw, 0.0, totalFilmDuration - 0.001);
+      let sIdx = STATION_MANIFEST.length - 1;
+      for (let i = 0; i < stationOffsets.length; i++) {
+        if (tFilm >= stationOffsets[i].start && tFilm < stationOffsets[i].end) {
+          sIdx = i;
+          break;
+        }
+      }
+
+      if (!mountActiveStationSync(sIdx)) return;
+
+      const st = streamMgr.getStationSync(sIdx);
+      const off = stationOffsets[sIdx];
+      const tLocal = THREE.MathUtils.clamp(tFilm - off.start, 0.0, st.duration);
+
+      // Deferred background prefetch only for next sequential station (no loop wrap to station 1!)
+      if (prefetchedForStation !== sIdx && sIdx + 1 < streamMgr.count && tLocal > 2.8 && manualOverrideFilmTime === null) {
+        prefetchedForStation = sIdx;
+        streamMgr.prefetchNext(sIdx);
+      }
+
+      const info = st.update(tLocal, tFilm, pelicanRig, camera, 'director');
+      if (info?.beatText) lastBeatText = info.beatText;
+      scene.fog.density = info?.fogDensityOverride ?? (st.fogDensity ?? 0.0022);
+
+      const isFinalStation = sIdx === STATION_MANIFEST.length - 1;
+      const fadeOut = isFinalStation ? 0.0 : smooth01(st.duration - 0.72, st.duration - 0.02, tLocal);
+      const fadeIn = sIdx === 0 ? 0.0 : (1.0 - smooth01(0.0, 0.65, tLocal));
+      const isDeterministicQA = manualOverrideFilmTime !== null;
+      const vOp = isDeterministicQA ? 0.0 : Math.max(fadeOut, fadeIn);
+      if (vOp > 0.002) {
+        if (!lastVeilVisible) { veilEl.style.visibility = 'visible'; lastVeilVisible = true; }
+        veilEl.style.opacity = vOp.toFixed(3);
+      } else if (lastVeilVisible) {
+        veilEl.style.opacity = '0';
+        veilEl.style.visibility = 'hidden';
+        lastVeilVisible = false;
+      }
+    }
+
+    window.__SOARIN_MASTER__ = {
+      ready: true,
+      streaming: true,
+      totalFilmDuration,
+      stationOffsets,
+      stationManifest: STATION_MANIFEST,
+      getHeroPose: () => {
+        const p = pelicanRig.root.position;
+        const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(pelicanRig.root.quaternion);
+        return {
+          x: p.x,
+          y: p.y,
+          z: p.z,
+          pitchDeg: Math.asin(Math.max(-1, Math.min(1, fwd.y))) * 180 / Math.PI,
+          yawDeg: Math.atan2(fwd.x, fwd.z) * 180 / Math.PI,
+          camX: camera.position.x,
+          camY: camera.position.y,
+          camZ: camera.position.z,
+        };
+      },
+      getMemoryTelemetry: () => ({
+        loadedStations: streamMgr.getLoadedStatus(),
+        residentCount: streamMgr.getLoadedStatus().filter((x) => x.resident).length,
+        gpuGeometries: renderer.info.memory.geometries,
+        gpuTextures: renderer.info.memory.textures,
+        renderCalls: renderer.info.render.calls,
+        renderTriangles: renderer.info.render.triangles,
+      }),
+      benchmarkStationCpuAsync: async (stationOneBased, frames = 240) => {
+        const idx = Math.max(0, Math.min(STATION_MANIFEST.length - 1, stationOneBased - 1));
+        const st = await streamMgr.ensureStationLoaded(idx);
+        mountActiveStationSync(idx);
+        const t0 = performance.now();
+        for (let k = 0; k < frames; k++) {
+          const tLoc = (k / frames) * (st.duration - 0.1);
+          st.update(tLoc, stationOffsets[idx].start + tLoc, pelicanRig, camera, 'director');
+        }
+        const totalMs = performance.now() - t0;
+        renderer.render(scene, camera);
+        return {
+          station: idx + 1,
+          slug: st.slug,
+          frames,
+          avgCpuUpdateMs: Number((totalMs / frames).toFixed(4)),
+          renderCalls: renderer.info.render.calls,
+          renderTriangles: renderer.info.render.triangles,
+        };
+      },
+      jumpToStationTimeAsync: async (stationOneBased, localSec, clean = true, skipRender = false) => {
+        document.body.classList.toggle('clean-qa', !!clean);
+        const idx = Math.max(0, Math.min(STATION_MANIFEST.length - 1, stationOneBased - 1));
+        const st = await streamMgr.ensureStationLoaded(idx);
+        manualOverrideFilmTime = stationOffsets[idx].start + Math.min(localSec, st.duration - 0.02);
+        evaluateMasterFilm(manualOverrideFilmTime);
+        if (!skipRender) {
+          renderer.render(scene, camera);
+        }
+        return {
+          station: idx + 1,
+          slug: st.slug,
+          duration: st.duration,
+          stageTris: st.stageTris,
+          beatText: lastBeatText,
+          placeName: uiTitle.textContent,
+          residentCount: streamMgr.getLoadedStatus().filter((x) => x.resident).length,
+          gpuGeometries: renderer.info.memory.geometries,
+          gpuTextures: renderer.info.memory.textures,
+        };
+      },
+      seekActiveVideos: (vidSec = 1.95) => new Promise((resolve) => {
+        const st = streamMgr.getStationSync(Math.max(0, currentActiveIdx));
+        const vids = [...(pelicanRig.omniVideos || []), ...(st?.omniVideos || [])];
+        let pending = vids.length;
+        if (!pending) {
+          renderer.render(scene, camera);
+          return resolve(0);
+        }
+        let finished = false;
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          renderer.render(scene, camera);
+          resolve(vids.length);
+        };
+        const doneOne = () => { if (--pending <= 0) setTimeout(finish, 120); };
+        vids.forEach((v) => {
+          try {
+            v.pause();
+            const onSeek = () => { v.removeEventListener('seeked', onSeek); doneOne(); };
+            v.addEventListener('seeked', onSeek);
+            v.currentTime = Math.min(vidSec, Math.max(0.1, (v.duration || 3.0) - 0.2));
+          } catch (e) { doneOne(); }
+        });
+        setTimeout(finish, 1100);
+      }),
+      setClean: (clean) => {
+        document.body.classList.toggle('clean-qa', !!clean);
+      },
+    };
+
+    evaluateMasterFilm(manualOverrideFilmTime ?? filmOffsetSec);
+    renderer.render(scene, camera);
+    document.getElementById('loader').classList.add('hidden');
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      if (isPaused && manualOverrideFilmTime === null) {
+        applyPausedViewpoint();
+        renderer.render(scene, camera);
+        return;
+      }
+      let t;
+      if (manualOverrideFilmTime !== null) {
+        t = manualOverrideFilmTime;
+      } else {
+        t = filmOffsetSec + (now - clockAnchorMs) * 0.001;
+        if (t >= totalFilmDuration - 0.01) {
+          t = totalFilmDuration - 0.01;
+          evaluateMasterFilm(t);
+          pausedFilmSec = t;
+          capturePausedViewpoint();
+          isPaused = true;
+          isFilmEnded = true;
+          setPlayIcon(false);
+          renderer.render(scene, camera);
+          return;
+        }
+      }
+      evaluateMasterFilm(t);
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

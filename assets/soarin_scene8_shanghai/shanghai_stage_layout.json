@@ -1,0 +1,99 @@
+{
+  "version": "v3",
+  "river_water_y_gltf": 0.0,
+  "oriental_pearl_gltf": {
+    "base": [
+      48.5,
+      3.6,
+      -42.0
+    ],
+    "lower_sphere": [
+      48.5,
+      31.1,
+      -42.0
+    ],
+    "upper_sphere": [
+      48.5,
+      69.1,
+      -42.0
+    ],
+    "spire_tip": [
+      48.5,
+      99.9,
+      -42.0
+    ]
+  },
+  "shanghai_tower_top_gltf": [
+    92.0,
+    135.0,
+    -94.0
+  ],
+  "swfc_top_gltf": [
+    79.0,
+    111.0,
+    -74.0
+  ],
+  "jin_mao_top_gltf": [
+    68.0,
+    96.9,
+    -58.0
+  ],
+  "bund_landmarks_gltf": {
+    "custom_house_clock": [
+      -53.3694,
+      39.8,
+      -43.0835
+    ],
+    "peace_hotel_pyramid": [
+      -51.4598,
+      50.3,
+      -68.8585
+    ],
+    "hsbc_dome": [
+      -52.7185,
+      36.7,
+      -14.0
+    ],
+    "peoples_heroes_monument_top": [
+      -30.278,
+      30.9,
+      -102.0
+    ],
+    "puxi_tower_count": 29
+  },
+  "cruise_ships_gltf": [
+    [
+      1.948,
+      3.0,
+      24.0
+    ],
+    [
+      7.2966,
+      3.0,
+      -16.0
+    ],
+    [
+      -17.4841,
+      3.0,
+      -48.0
+    ],
+    [
+      7.5858,
+      3.0,
+      -80.0
+    ],
+    [
+      3.8866,
+      3.0,
+      -115.0
+    ],
+    [
+      48.7704,
+      3.0,
+      -154.0
+    ]
+  ],
+  "pudong_secondary_towers": 27,
+  "total_buildings": 71,
+  "total_tris": 84080
+}
