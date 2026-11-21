@@ -508,10 +508,10 @@ export async function createStation(renderer) {
         float w = 0.0;
         vec2 q1 = vec2(xz.x * 0.86 - xz.y * 0.50, xz.x * 0.50 + xz.y * 0.86);
         vec2 q2 = vec2(xz.x * 0.64 + xz.y * 0.77, -xz.x * 0.77 + xz.y * 0.64);
-        w += (vnoise(q1 * 0.58 + vec2(t * 0.34, -t * 0.28)) - 0.5) * 0.068;
-        w += (vnoise(q2 * 1.48 - vec2(t * 0.62, t * 0.46)) - 0.5) * 0.034;
-        w += (vnoise(xz * 3.30 + vec2(t * 0.96, -t * 0.78)) - 0.5) * 0.016;
-        w += (vnoise(q1 * 6.50 - vec2(t * 1.45, t * 1.15)) - 0.5) * 0.008;
+        w += (vnoise(q1 * 0.65 + vec2(t * 0.30, -t * 0.24)) - 0.5) * 0.036;
+        w += (vnoise(q2 * 1.75 - vec2(t * 0.54, t * 0.42)) - 0.5) * 0.020;
+        w += (vnoise(xz * 4.20 + vec2(t * 0.88, -t * 0.70)) - 0.5) * 0.011;
+        w += (vnoise(q1 * 8.60 - vec2(t * 1.35, t * 1.05)) - 0.5) * 0.006;
         return w;
       }
 
@@ -558,16 +558,16 @@ export async function createStation(renderer) {
             float tireAlong = dot(dT, fwd);
             float tireLat = abs(dot(dT, rgt));
 
-            float machEnvelope = smoothstep(0.55, -0.35, tireAlong) * exp(-rT * 0.95) * smoothstep(3.8, 0.0, rT);
-            float rTWarp = rT + organicWarp * 0.38;
-            float oscBow = sin(rTWarp * 14.0 - uTime * 20.0) * 0.6 + sin(rTWarp * 7.5 - uTime * 12.0) * 0.4;
-            wakeGrad += (dT / rT) * (oscBow * 0.28 * machEnvelope * uHeroSkim);
+            float machEnvelope = smoothstep(0.45, -0.30, tireAlong) * exp(-rT * 1.15) * smoothstep(3.2, 0.0, rT);
+            float rTWarp = rT + organicWarp * 0.32;
+            float oscBow = sin(rTWarp * 15.0 - uTime * 21.0) * 0.6 + sin(rTWarp * 8.0 - uTime * 13.0) * 0.4;
+            wakeGrad += (dT / rT) * (oscBow * 0.16 * machEnvelope * uHeroSkim);
 
-            float contactLine = exp(-tireLat * tireLat * 54.0) * smoothstep(0.28, -0.06, tireAlong) * smoothstep(-1.35, -0.15, tireAlong);
-            wakeFoam += contactLine * smoothstep(0.22, 0.76, lace + 0.28) * 0.76 * uHeroSkim;
+            float contactLine = exp(-tireLat * tireLat * 68.0) * smoothstep(0.22, -0.05, tireAlong) * smoothstep(-1.15, -0.15, tireAlong);
+            wakeFoam += contactLine * smoothstep(0.32, 0.82, lace + 0.18) * 0.54 * uHeroSkim;
           }
 
-          // 2. Wide, Lacy Feathered Kelvin V-Wake Arms along 22-Segment Curved Spline Trail!
+          // 2. Crisp Feathered Kelvin V-Wake Arms along 22-Segment Curved Spline Trail!
           float minTrailD = 999.0;
           float trailAge = 1.0;
           float signedSide = sign(lat + 1e-4);
@@ -589,25 +589,25 @@ export async function createStation(renderer) {
             }
           }
 
-          if (minTrailD < 14.0) {
-            float aftFade = smoothstep(0.01, 0.08, trailAge);
-            float warpedD = minTrailD + organicWarp * (0.22 + trailAge * 0.45);
-            float vSpread = 0.10 + trailAge * 5.20;
+          if (minTrailD < 13.0) {
+            float aftFade = smoothstep(0.015, 0.09, trailAge);
+            float warpedD = minTrailD + organicWarp * (0.20 + trailAge * 0.42);
+            float vSpread = 0.08 + trailAge * 4.90;
             float armDist = abs(warpedD - vSpread);
             float innerArmDist = abs(warpedD - vSpread * 0.54);
 
-            float armMask = exp(-armDist * armDist * (4.5 - trailAge * 2.1)) * (1.0 - trailAge * 0.65) * aftFade;
-            float innerArmMask = exp(-innerArmDist * innerArmDist * 5.0) * (1.0 - trailAge * 0.72) * aftFade;
-            float centerTrack = exp(-minTrailD * minTrailD * 14.0) * (1.0 - trailAge * 0.58);
+            float armMask = exp(-armDist * armDist * (6.0 - trailAge * 2.4)) * (1.0 - trailAge * 0.68) * aftFade;
+            float innerArmMask = exp(-innerArmDist * innerArmDist * 6.8) * (1.0 - trailAge * 0.75) * aftFade;
+            float centerTrack = exp(-minTrailD * minTrailD * 22.0) * (1.0 - trailAge * 0.64) * aftFade;
 
-            float kelvinWave = sin((warpedD - vSpread) * 13.5 - uTime * 16.0);
-            float innerWave  = sin((warpedD - vSpread * 0.54) * 15.5 - uTime * 18.0);
-            float centerRip  = (lace - 0.5) * 0.85 * centerTrack;
-            wakeGrad += bestSegPerp * ((kelvinWave * armMask * 0.42 + innerWave * innerArmMask * 0.24 + centerRip * 0.32) * uHeroSkim);
+            float kelvinWave = sin((warpedD - vSpread) * 14.5 - uTime * 16.0);
+            float innerWave  = sin((warpedD - vSpread * 0.54) * 16.5 - uTime * 18.0);
+            float centerRip  = (lace - 0.5) * 0.55 * centerTrack;
+            wakeGrad += bestSegPerp * ((kelvinWave * armMask * 0.26 + innerWave * innerArmMask * 0.16 + centerRip * 0.22) * uHeroSkim);
 
-            wakeFoam += armMask * smoothstep(0.32, 0.80, lace + 0.20) * 0.62 * uHeroSkim;
-            wakeFoam += innerArmMask * smoothstep(0.40, 0.86, lace + 0.14) * 0.30 * uHeroSkim;
-            wakeFoam += centerTrack * smoothstep(0.26, 0.76, lace + 0.24) * 0.64 * uHeroSkim;
+            wakeFoam += armMask * smoothstep(0.40, 0.85, lace + 0.12) * 0.44 * uHeroSkim;
+            wakeFoam += innerArmMask * smoothstep(0.46, 0.88, lace + 0.08) * 0.22 * uHeroSkim;
+            wakeFoam += centerTrack * smoothstep(0.42, 0.86, lace + 0.10) * 0.28 * uHeroSkim;
           }
         }
 
@@ -908,8 +908,8 @@ export async function createStation(renderer) {
         float luma = dot(vc, vec3(0.299, 0.587, 0.114));
         float fx = smoothstep(0.0, 0.08, vUv.x) * smoothstep(1.0, 0.70, vUv.x);
         float fy = smoothstep(0.0, 0.08, vUv.y) * smoothstep(0.96, 0.66, vUv.y);
-        float mask = smoothstep(0.08, 0.58, luma) * fx * fy * uSkimGain * 0.42;
-        vec3 sunlitSpray = mix(vec3(0.98, 0.86, 0.56), vec3(1.00, 0.99, 0.92), clamp(luma * 1.2, 0.0, 1.0));
+        float mask = smoothstep(0.12, 0.62, luma) * fx * fy * uSkimGain * 0.24;
+        vec3 sunlitSpray = mix(vec3(0.98, 0.88, 0.62), vec3(1.00, 0.99, 0.94), clamp(luma * 1.2, 0.0, 1.0));
         gl_FragColor = vec4(sunlitSpray * mask, clamp(mask, 0.0, 1.0));
       }
     `,
@@ -920,27 +920,28 @@ export async function createStation(renderer) {
   group.add(waterSkimGroup);
 
   for (const [zContact, len, h, spreadDeg] of [
-    [+0.44, 1.15, 0.46,  16.0],
-    [+0.44, 1.15, 0.46, -16.0],
-    [-0.58, 1.65, 0.62,  18.0],
-    [-0.58, 1.65, 0.62, -18.0],
+    [+0.44, 0.95, 0.34,  16.0],
+    [+0.44, 0.95, 0.34, -16.0],
+    [-0.58, 1.35, 0.44,  18.0],
+    [-0.58, 1.35, 0.44, -18.0],
   ]) {
     const pGeo = new THREE.PlaneGeometry(len, h);
     pGeo.translate(len * 0.48, h * 0.42, 0.0);
-    pGeo.rotateY(-Math.PI * 0.5 + THREE.MathUtils.degToRad(spreadDeg));
+    // +Math.PI/2 rotates +X into -Z (TRAILING BACKWARD behind each wheel!)
+    pGeo.rotateY(Math.PI * 0.5 + THREE.MathUtils.degToRad(spreadDeg));
     const mesh = new THREE.Mesh(pGeo, omniSprayMat);
     mesh.position.set(0.0, -0.02, zContact);
     mesh.renderOrder = 7;
     waterSkimGroup.add(mesh);
   }
 
-  const DROP_COUNT = 240;
-  const dropGeo = new THREE.OctahedronGeometry(0.0056, 0);
-  dropGeo.scale(0.85, 0.85, 2.05);
+  const DROP_COUNT = 220;
+  const dropGeo = new THREE.SphereGeometry(0.0052, 6, 5);
+  dropGeo.scale(0.85, 0.85, 2.2);
   const dropMat = new THREE.MeshBasicMaterial({
-    color: 0xfff4d4,
+    color: 0xfff5dc,
     transparent: true,
-    opacity: 0.82,
+    opacity: 0.64,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     fog: false,

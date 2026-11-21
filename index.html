@@ -588,6 +588,12 @@
         }
       }
 
+      // Forward-only monotonic station lock during live playback (never bounce backwards!)
+      if (manualOverrideFilmTime === null && currentActiveIdx >= 0 && sIdx < currentActiveIdx) {
+        sIdx = currentActiveIdx;
+        tFilm = Math.max(tFilm, stationOffsets[sIdx].start);
+      }
+
       const prevActiveIdx = currentActiveIdx;
       // Clock-hold barrier: NEVER skip past an unloaded station! Hold right at its start
       // (`stationOffsets[sIdx].start`) until streaming finishes, then resume smoothly from 0.00s.
@@ -741,6 +747,7 @@
     evaluateMasterFilm(manualOverrideFilmTime ?? filmOffsetSec);
     renderer.render(scene, camera);
     document.getElementById('loader').classList.add('hidden');
+    clockAnchorMs = performance.now();
 
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
@@ -748,18 +755,19 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    function animate(now) {
+    function animate() {
       requestAnimationFrame(animate);
       if (isPaused && manualOverrideFilmTime === null) {
         applyPausedViewpoint();
         renderer.render(scene, camera);
         return;
       }
+      const now = performance.now();
       let t;
       if (manualOverrideFilmTime !== null) {
         t = manualOverrideFilmTime;
       } else {
-        t = filmOffsetSec + (now - clockAnchorMs) * 0.001;
+        t = filmOffsetSec + Math.max(0, (now - clockAnchorMs) * 0.001);
         if (t >= totalFilmDuration - 0.01) {
           t = totalFilmDuration - 0.01;
           evaluateMasterFilm(t);
