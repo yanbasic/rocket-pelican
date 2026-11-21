@@ -506,10 +506,12 @@ export async function createStation(renderer) {
       float waveHeight(vec2 xz) {
         float t = uTime;
         float w = 0.0;
-        w += sin(xz.x * 1.65 + xz.y * 1.15 + t * 1.95) * 0.0072;
-        w += sin(xz.x * 3.10 - xz.y * 2.35 + t * 2.45) * 0.0042;
-        w += cos(xz.x * 6.20 + xz.y * 4.80 - t * 3.10) * 0.0020;
-        w += (vnoise(xz * 4.8 + vec2(t * 0.65, -t * 0.85)) - 0.5) * 0.0038;
+        vec2 q1 = vec2(xz.x * 0.86 - xz.y * 0.50, xz.x * 0.50 + xz.y * 0.86);
+        vec2 q2 = vec2(xz.x * 0.64 + xz.y * 0.77, -xz.x * 0.77 + xz.y * 0.64);
+        w += (vnoise(q1 * 0.58 + vec2(t * 0.34, -t * 0.28)) - 0.5) * 0.068;
+        w += (vnoise(q2 * 1.48 - vec2(t * 0.62, t * 0.46)) - 0.5) * 0.034;
+        w += (vnoise(xz * 3.30 + vec2(t * 0.96, -t * 0.78)) - 0.5) * 0.016;
+        w += (vnoise(q1 * 6.50 - vec2(t * 1.45, t * 1.15)) - 0.5) * 0.008;
         return w;
       }
 
@@ -532,37 +534,37 @@ export async function createStation(renderer) {
         float wakeFoam = 0.0;
         vec2 wakeGrad = vec2(0.0);
 
+        float warpA = vnoise(xz * 1.15 + vec2(uTime * 0.45, -uTime * 0.35)) - 0.5;
+        float warpB = vnoise(xz * 2.45 - vec2(uTime * 0.65, uTime * 0.55)) - 0.5;
+        float organicWarp = warpA * 0.62 + warpB * 0.28;
+
         // ======================================================================
-        // PHYSICAL GLOSSY CONCENTRIC TIRE WAVES + DELICATE LACY KELVIN V-WAKE!
+        // ORGANIC HYDRODYNAMIC BOW-WAVE + FEATHERED KELVIN V-WAKE!
         // ======================================================================
         if (uHeroSkim > 0.005 && abs(xz.x - uHeroPos.x) < 28.0 && abs(xz.y - uHeroPos.z) < 44.0) {
           vec2 fwd = normalize(uHeroFwd + vec2(1e-5));
           vec2 rgt = vec2(-fwd.y, fwd.x);
           float lat = dot(xz - uHeroPos.xz, rgt);
-          float lace1 = vnoise(xz * 8.5 + vec2(0.0, uTime * 3.6));
-          float lace2 = vnoise(xz * 18.0 - vec2(uTime * 2.2, -uTime * 3.0));
+          float lace1 = vnoise(xz * 7.5 + vec2(0.0, uTime * 3.6));
+          float lace2 = vnoise(xz * 16.5 - vec2(uTime * 2.2, -uTime * 3.0));
           float lace = lace1 * 0.58 + lace2 * 0.42;
 
-          // 1. Multi-ring concentric capillary & gravity ripples around Front (+0.50m) & Rear (-0.52m) tires
+          // 1. Tight Mach-cutoff bow-wave disturbance strictly near & aft of Front (+0.50m) & Rear (-0.52m) tires
           for (int wi = 0; wi < 2; wi++) {
             float wOff = (wi == 0) ? 0.50 : -0.52;
             vec2 tireXZ = uHeroPos.xz + fwd * wOff;
             vec2 dT = xz - tireXZ;
             float rT = length(dT) + 1e-4;
-            float envCap = exp(-rT * 0.30) * smoothstep(12.5, 0.0, rT);
-            float oscFine = sin(rT * 19.0 - uTime * 24.0);
-            float oscGrav = sin(rT * 9.5 - uTime * 15.0);
-            float combinedOsc = oscFine * 0.56 + oscGrav * 0.44;
-
-            // Glossy normal wave rings (catches emerald & golden Fresnel highlights without white paint blowout!)
-            wakeGrad += (dT / rT) * (combinedOsc * 0.48 * envCap * uHeroSkim);
-
-            // Narrow, delicate lacy foam strictly along the thin rubber tire contact line (rLat < 0.16m)!
-            float tireLat = abs(dot(dT, rgt));
             float tireAlong = dot(dT, fwd);
-            float contactLine = exp(-tireLat * tireLat * 48.0) * smoothstep(0.32, -0.10, tireAlong) * smoothstep(-1.35, -0.15, tireAlong);
-            wakeFoam += contactLine * smoothstep(0.18, 0.72, lace + 0.32) * 0.78 * uHeroSkim;
-            wakeFoam += smoothstep(0.68, 0.99, oscFine) * exp(-rT * 0.95) * smoothstep(0.35, 0.85, lace) * 0.30 * uHeroSkim;
+            float tireLat = abs(dot(dT, rgt));
+
+            float machEnvelope = smoothstep(0.55, -0.35, tireAlong) * exp(-rT * 0.95) * smoothstep(3.8, 0.0, rT);
+            float rTWarp = rT + organicWarp * 0.38;
+            float oscBow = sin(rTWarp * 14.0 - uTime * 20.0) * 0.6 + sin(rTWarp * 7.5 - uTime * 12.0) * 0.4;
+            wakeGrad += (dT / rT) * (oscBow * 0.28 * machEnvelope * uHeroSkim);
+
+            float contactLine = exp(-tireLat * tireLat * 54.0) * smoothstep(0.28, -0.06, tireAlong) * smoothstep(-1.35, -0.15, tireAlong);
+            wakeFoam += contactLine * smoothstep(0.22, 0.76, lace + 0.28) * 0.76 * uHeroSkim;
           }
 
           // 2. Wide, Lacy Feathered Kelvin V-Wake Arms along 22-Segment Curved Spline Trail!
@@ -587,24 +589,25 @@ export async function createStation(renderer) {
             }
           }
 
-          if (minTrailD < 15.5) {
-            // Start V-spread gracefully behind the rear wheel so water right beside the wheels stays glassy for wheel reflections!
-            float aftFade = smoothstep(0.01, 0.09, trailAge);
-            float vSpread = 0.12 + trailAge * 6.50;
-            float armDist = abs(minTrailD - vSpread);
-            float innerArmDist = abs(minTrailD - vSpread * 0.58);
+          if (minTrailD < 14.0) {
+            float aftFade = smoothstep(0.01, 0.08, trailAge);
+            float warpedD = minTrailD + organicWarp * (0.22 + trailAge * 0.45);
+            float vSpread = 0.10 + trailAge * 5.20;
+            float armDist = abs(warpedD - vSpread);
+            float innerArmDist = abs(warpedD - vSpread * 0.54);
 
-            float armMask = exp(-armDist * armDist * (4.2 - trailAge * 2.2)) * (1.0 - trailAge * 0.66) * aftFade;
-            float innerArmMask = exp(-innerArmDist * innerArmDist * 4.8) * (1.0 - trailAge * 0.74) * aftFade;
-            float centerTrack = exp(-minTrailD * minTrailD * 18.0) * (1.0 - trailAge * 0.62);
+            float armMask = exp(-armDist * armDist * (4.5 - trailAge * 2.1)) * (1.0 - trailAge * 0.65) * aftFade;
+            float innerArmMask = exp(-innerArmDist * innerArmDist * 5.0) * (1.0 - trailAge * 0.72) * aftFade;
+            float centerTrack = exp(-minTrailD * minTrailD * 14.0) * (1.0 - trailAge * 0.58);
 
-            float kelvinWave = sin((minTrailD - vSpread) * 15.0 - uTime * 18.0);
-            float innerWave  = sin((minTrailD - vSpread * 0.58) * 16.5 - uTime * 19.5);
-            wakeGrad += bestSegPerp * ((kelvinWave * armMask * 0.54 + innerWave * innerArmMask * 0.30) * uHeroSkim);
+            float kelvinWave = sin((warpedD - vSpread) * 13.5 - uTime * 16.0);
+            float innerWave  = sin((warpedD - vSpread * 0.54) * 15.5 - uTime * 18.0);
+            float centerRip  = (lace - 0.5) * 0.85 * centerTrack;
+            wakeGrad += bestSegPerp * ((kelvinWave * armMask * 0.42 + innerWave * innerArmMask * 0.24 + centerRip * 0.32) * uHeroSkim);
 
-            wakeFoam += armMask * smoothstep(0.30, 0.80, lace + 0.22) * 0.74 * uHeroSkim;
-            wakeFoam += innerArmMask * smoothstep(0.38, 0.86, lace + 0.16) * 0.36 * uHeroSkim;
-            wakeFoam += centerTrack * smoothstep(0.24, 0.76, lace + 0.28) * 0.72 * uHeroSkim;
+            wakeFoam += armMask * smoothstep(0.32, 0.80, lace + 0.20) * 0.62 * uHeroSkim;
+            wakeFoam += innerArmMask * smoothstep(0.40, 0.86, lace + 0.14) * 0.30 * uHeroSkim;
+            wakeFoam += centerTrack * smoothstep(0.26, 0.76, lace + 0.24) * 0.64 * uHeroSkim;
           }
         }
 
@@ -691,36 +694,37 @@ export async function createStation(renderer) {
         vec3 envRefl = mix(skyRefl, darkVelvetRefl, totalKarstRefl);
         envRefl *= (1.0 - raftShadow * 0.58);
 
-        // --- Crisp Rippled Upside-Down Reflection of Pelican & Both Bicycle Wheels! ---
-        if (uHeroPos.y < 4.5 && abs(xz.x - uHeroPos.x) < 6.5 && abs(xz.y - uHeroPos.z) < 8.5) {
+        // --- Natural Wave-Distorted Tinted Reflection of Pelican & Both Bicycle Wheels! ---
+        if (uHeroPos.y < 3.8 && abs(xz.x - uHeroPos.x) < 5.8 && abs(xz.y - uHeroPos.z) < 7.5) {
           vec2 fwd = normalize(uHeroFwd + vec2(1e-5));
           vec2 rgt = vec2(-fwd.y, fwd.x);
           vec2 camRel = cameraPosition.xz - uHeroPos.xz;
-          vec2 pixRel = xz - uHeroPos.xz + nrm.xz * 0.16;
+          vec2 pixRel = xz - uHeroPos.xz + nrm.xz * 0.48 + vec2(warpA, warpB) * 0.08;
           float camLat = dot(camRel, rgt);
           float pixLat = dot(pixRel, rgt);
           float denom = camLat - pixLat;
-          if (abs(denom) > 0.04) {
+          if (abs(denom) > 0.05) {
             float uRay = pixLat / denom;
-            if (uRay > 0.0 && uRay < 2.8) {
+            if (uRay > 0.0 && uRay < 2.6) {
               float yVirt = uRay * cameraPosition.y - uHeroPos.y;
               vec2 hitXZ = pixRel + uRay * (pixRel - camRel);
               float fCoord = dot(hitXZ, fwd);
 
               float dFW = length(vec2(fCoord - 0.50, yVirt - 0.33));
               float dRW = length(vec2(fCoord + 0.52, yVirt - 0.33));
-              float tireRim = smoothstep(0.062, 0.020, abs(dFW - 0.31)) + smoothstep(0.062, 0.020, abs(dRW - 0.31));
-              float wheelHub = smoothstep(0.075, 0.022, dFW) + smoothstep(0.075, 0.022, dRW);
-              float spokes = (step(dFW, 0.30) + step(dRW, 0.30)) * 0.25;
-
-              float frameBar = smoothstep(0.065, 0.022, abs(yVirt - 0.56)) * step(abs(fCoord), 0.48) * 0.80;
+              float tireRim = smoothstep(0.075, 0.018, abs(dFW - 0.31)) + smoothstep(0.075, 0.018, abs(dRW - 0.31));
+              float frameBar = smoothstep(0.075, 0.020, abs(yVirt - 0.56)) * step(abs(fCoord), 0.48);
               vec2 pelEll = (vec2(fCoord + 0.05, yVirt - 0.98)) / vec2(0.42, 0.44);
-              float pelBody = smoothstep(1.15, 0.70, length(pelEll)) * 0.85;
+              float pelBody = smoothstep(1.15, 0.65, length(pelEll));
 
-              float bikeReflMask = clamp(tireRim * 0.95 + wheelHub * 0.80 + spokes + frameBar + pelBody, 0.0, 0.92)
-                                 * smoothstep(4.2, 0.4, uHeroPos.y);
-              envRefl = mix(envRefl, vec3(0.014, 0.042, 0.030), bikeReflMask);
-              waterBody = mix(waterBody, vec3(0.010, 0.032, 0.024), bikeReflMask * 0.80);
+              float atten = smoothstep(3.4, 0.25, uHeroPos.y) * 0.34;
+              vec3 reflTint = envRefl;
+              reflTint = mix(reflTint, vec3(0.42, 0.46, 0.34), clamp(tireRim, 0.0, 1.0) * 0.55);
+              reflTint = mix(reflTint, vec3(0.36, 0.14, 0.15), clamp(frameBar, 0.0, 1.0) * 0.65);
+              reflTint = mix(reflTint, vec3(0.56, 0.58, 0.50), clamp(pelBody, 0.0, 1.0) * 0.60);
+              float maskTot = clamp(tireRim * 0.65 + frameBar * 0.65 + pelBody * 0.75, 0.0, 1.0) * atten;
+              envRefl = mix(envRefl, reflTint, maskTot);
+              waterBody *= (1.0 - maskTot * 0.28);
             }
           }
         }
