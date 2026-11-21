@@ -576,9 +576,10 @@
     let prefetchedForStation = -1;
     let lastVeilVisible = true;
     let lastBeatText = '';
+    let justMountedStation = false;
 
     function evaluateMasterFilm(tFilmRaw) {
-      const tFilm = THREE.MathUtils.clamp(tFilmRaw, 0.0, totalFilmDuration - 0.001);
+      let tFilm = THREE.MathUtils.clamp(tFilmRaw, 0.0, totalFilmDuration - 0.001);
       let sIdx = STATION_MANIFEST.length - 1;
       for (let i = 0; i < stationOffsets.length; i++) {
         if (tFilm >= stationOffsets[i].start && tFilm < stationOffsets[i].end) {
@@ -587,6 +588,7 @@
         }
       }
 
+      const prevActiveIdx = currentActiveIdx;
       // Clock-hold barrier: NEVER skip past an unloaded station! Hold right at its start
       // (`stationOffsets[sIdx].start`) until streaming finishes, then resume smoothly from 0.00s.
       if (!mountActiveStationSync(sIdx)) {
@@ -597,6 +599,14 @@
         if (!lastVeilVisible) { veilEl.style.visibility = 'visible'; lastVeilVisible = true; }
         veilEl.style.opacity = '0.94';
         return;
+      }
+
+      // Freshly mounted station: start cleanly at 0.00s so GPU upload latency never skips early beats!
+      if (currentActiveIdx !== prevActiveIdx && manualOverrideFilmTime === null && !isPaused) {
+        filmOffsetSec = stationOffsets[sIdx].start;
+        clockAnchorMs = performance.now();
+        tFilm = filmOffsetSec;
+        justMountedStation = true;
       }
 
       const st = streamMgr.getStationSync(sIdx);
@@ -764,6 +774,10 @@
       }
       evaluateMasterFilm(t);
       renderer.render(scene, camera);
+      if (justMountedStation) {
+        justMountedStation = false;
+        clockAnchorMs = performance.now();
+      }
     }
     requestAnimationFrame(animate);
   </script>
