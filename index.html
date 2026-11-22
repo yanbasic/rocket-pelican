@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pelican Over China — Gemini 4 Hydrogen + Blender</title>
+  <title>Rocket Pelican — Gemini 4 Hydrogen + Blender</title>
   <style>
     :root {
       --gold: #f6ce7b;
@@ -102,6 +102,23 @@
       font-size: 11px; font-weight: 600; letter-spacing: 0.18em;
       color: rgba(246, 218, 162, 0.78);
     }
+    .ld-mode-badge {
+      margin-top: 8px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.22em;
+      color: #ffe8ad;
+      padding: 3px 10px;
+      border-radius: 99px;
+      border: 1px solid rgba(246, 210, 134, 0.52);
+      background: rgba(246, 206, 123, 0.14);
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+      pointer-events: none;
+    }
+    .ld-mode-badge.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
 
     /* Cinema HUD — Option A Delicate Chamfered Gold-Hairline Plaque */
     #cinema-ui {
@@ -187,7 +204,7 @@
       </svg>
       <span>Made by Gemini 4 Hydrogen + Blender</span>
     </div>
-    <div class="ld-title">PELICAN OVER CHINA</div>
+    <div class="ld-title">ROCKET PELICAN</div>
     <div class="ld-track-stage">
       <div class="ld-pelican-rider" id="ld-pelican-rider">
         <img src="./assets/soarin_shared/pelican_loading_cartoon.png" alt="Pelican Cycling" />
@@ -195,6 +212,7 @@
       <div class="ld-bar-wrap"><div class="ld-bar-fill" id="ld-bar"></div></div>
     </div>
     <div class="ld-pct" id="ld-pct">0%</div>
+    <div class="ld-mode-badge" id="ld-mode-badge">FULL EDITION · 9 SCENES</div>
   </div>
 
   <div id="dome-vignette"></div>
@@ -236,25 +254,71 @@
     </div>
   </div>
 
+  <script>
+    // Early Shift / Shift+Click capture from millisecond 0 while module scripts load
+    window.__ROCKET_PELICAN_FULL__ = false;
+    (function() {
+      const ld = document.getElementById('loader');
+      const badge = document.getElementById('ld-mode-badge');
+      const arm = () => {
+        if (window.__ROCKET_PELICAN_FULL__) return;
+        window.__ROCKET_PELICAN_FULL__ = true;
+        if (badge) badge.classList.add('active');
+      };
+      window.addEventListener('keydown', (e) => {
+        if (ld && !ld.classList.contains('hidden') && (e.key === 'Shift' || e.shiftKey)) arm();
+      });
+      if (ld) {
+        ld.addEventListener('pointerdown', (e) => {
+          if (!ld.classList.contains('hidden') && e.shiftKey) arm();
+        });
+      }
+    })();
+  </script>
   <script type="module">
     import * as THREE from 'three';
     import { loadPelicanHeroRig } from './assets/soarin_shared/pelican_hero_rig.js';
     import { createStationStreamManager } from './assets/soarin_shared/station_stream_manager.js';
 
-    const STATION_MANIFEST = [
-      { id: 1, slug: 'great_wall',     nameZh: '万里长城',     placeName: '万里长城',     titleZh: '万里长城 · 振铃破云日出',           duration: 18.0, modulePath: '../soarin_scene1_gw/station_module.js' },
-      { id: 2, slug: 'zhangjiajie',    nameZh: '张家界奇峰',   placeName: '张家界武陵源', titleZh: '张家界武陵源 · 奇峰飞瀑穿行',       duration: 16.0, modulePath: '../soarin_scene2_zhangjiajie/station_module.js' },
-      { id: 3, slug: 'guilin',         nameZh: '桂林漓江',     placeName: '桂林漓江',     titleZh: '桂林漓江 · 车轮掠波激起水花',       duration: 16.0, modulePath: '../soarin_scene3_guilin/station_module.js' },
-      { id: 4, slug: 'potala',         nameZh: '西藏布达拉宫', placeName: '西藏布达拉宫', titleZh: '西藏布达拉宫 · 经幡雪山环形腾空',   duration: 17.0, modulePath: '../soarin_scene4_potala/station_module.js' },
-      { id: 5, slug: 'forbidden_city', nameZh: '北京故宫',     placeName: '北京紫禁城',   titleZh: '北京紫禁城 · 御道骑行飞越金顶',     duration: 16.0, modulePath: '../soarin_scene5_forbiddencity/station_module.js' },
-      { id: 6, slug: 'dunhuang',       nameZh: '敦煌月牙泉',   placeName: '敦煌月牙泉',   titleZh: '敦煌月牙泉 · 大漠落日远景环绕',     duration: 16.0, modulePath: '../soarin_scene6_dunhuang/station_module.js' },
-      { id: 7, slug: 'hongyadong',     nameZh: '重庆洪崖洞',   placeName: '重庆洪崖洞',   titleZh: '重庆洪崖洞 · 千厮门桥骑行江湾夜色', duration: 18.0, modulePath: '../soarin_scene7_hongyadong/station_module.js' },
-      { id: 8, slug: 'shanghai',       nameZh: '上海外滩烟花', placeName: '上海外滩',     titleZh: '上海陆家嘴外滩 · 漫天烟花振铃终章', duration: 21.0, modulePath: '../soarin_scene8_shanghai/station_module.js' },
+    const FULL_NINE_MANIFEST = [
+      { id: 1, slug: 'great_wall',     nameZh: '万里长城',       placeName: '万里长城',       titleZh: '万里长城 · 振铃破云日出',           duration: 18.0, modulePath: '../soarin_scene1_gw/station_module.js' },
+      { id: 2, slug: 'forbidden_city', nameZh: '北京故宫',       placeName: '北京紫禁城',     titleZh: '北京紫禁城 · 御道骑行飞越金顶',     duration: 16.0, modulePath: '../soarin_scene5_forbiddencity/station_module.js' },
+      { id: 3, slug: 'zhangjiajie',    nameZh: '张家界奇峰',     placeName: '张家界武陵源',   titleZh: '张家界武陵源 · 奇峰飞瀑穿行',       duration: 16.0, modulePath: '../soarin_scene2_zhangjiajie/station_module.js' },
+      { id: 4, slug: 'guilin',         nameZh: '桂林漓江',       placeName: '桂林漓江',       titleZh: '桂林漓江 · 车轮掠波激起水花',       duration: 16.0, modulePath: '../soarin_scene3_guilin/station_module.js' },
+      { id: 5, slug: 'potala',         nameZh: '西藏布达拉宫',   placeName: '西藏布达拉宫',   titleZh: '西藏布达拉宫 · 经幡雪山环形腾空',   duration: 17.0, modulePath: '../soarin_scene4_potala/station_module.js' },
+      { id: 6, slug: 'dunhuang',       nameZh: '敦煌月牙泉',     placeName: '敦煌月牙泉',     titleZh: '敦煌月牙泉 · 大漠落日远景环绕',     duration: 16.0, modulePath: '../soarin_scene6_dunhuang/station_module.js' },
+      { id: 7, slug: 'hongkong',       nameZh: '香港维多利亚港', placeName: '香港维多利亚港', titleZh: '香港维多利亚港 · 摩天轮红帆与中银天际线', duration: 16.0, modulePath: '../soarin_scene9_hongkong/station_module.js' },
+      { id: 8, slug: 'hongyadong',     nameZh: '重庆洪崖洞',     placeName: '重庆洪崖洞',     titleZh: '重庆洪崖洞 · 千厮门桥骑行江湾夜色', duration: 18.0, modulePath: '../soarin_scene7_hongyadong/station_module.js' },
+      { id: 9, slug: 'shanghai',       nameZh: '上海外滩烟花',   placeName: '上海外滩',       titleZh: '上海陆家嘴外滩 · 漫天烟花振铃终章', duration: 21.0, modulePath: '../soarin_scene8_shanghai/station_module.js' },
     ];
+    const CORE_SEVEN_MANIFEST = FULL_NINE_MANIFEST
+      .filter((s) => s.slug !== 'forbidden_city' && s.slug !== 'guilin')
+      .map((s, idx) => ({ ...s, id: idx + 1 }));
 
     const params = new URLSearchParams(location.search);
     const isCleanQA = params.get('clean') === '1';
     if (isCleanQA) document.body.classList.add('clean-qa');
+
+    // Secret Full-9-Scene Enablement: press/hold Shift (or Shift+Click) on the loading page, or ?full=1
+    let useFullNineStations = Boolean(window.__ROCKET_PELICAN_FULL__) || params.get('full') === '1';
+    const loaderEl = document.getElementById('loader');
+    const ldModeBadge = document.getElementById('ld-mode-badge');
+    const armFullMode = () => {
+      if (useFullNineStations) return;
+      useFullNineStations = true;
+      window.__ROCKET_PELICAN_FULL__ = true;
+      ldModeBadge?.classList.add('active');
+    };
+    if (useFullNineStations) ldModeBadge?.classList.add('active');
+
+    const onLoaderShiftKey = (e) => {
+      if (!loaderEl.classList.contains('hidden') && (e.key === 'Shift' || e.shiftKey)) armFullMode();
+    };
+    const onLoaderShiftClick = (e) => {
+      if (!loaderEl.classList.contains('hidden') && e.shiftKey) armFullMode();
+    };
+    window.addEventListener('keydown', onLoaderShiftKey);
+    loaderEl.addEventListener('pointerdown', onLoaderShiftClick);
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -289,7 +353,8 @@
     scene.add(pelicanRig.root);
     setLoaderProgress(58);
 
-    const streamMgr = createStationStreamManager({
+    let STATION_MANIFEST = useFullNineStations ? FULL_NINE_MANIFEST : CORE_SEVEN_MANIFEST;
+    let streamMgr = createStationStreamManager({
       renderer,
       scene,
       camera,
@@ -297,14 +362,14 @@
       stationManifest: STATION_MANIFEST,
     });
 
-    const { totalFilmDuration, stationOffsets } = streamMgr;
+    let { totalFilmDuration, stationOffsets } = streamMgr;
 
     // Determine initial station (defaults to Station 1 for instant ~1.5s boot!)
     let initStationIdx = 0;
     let initLocalSec = 0.0;
     let manualOverrideFilmTime = params.has('filmT') ? parseFloat(params.get('filmT')) : null;
     if (params.has('station')) {
-      initStationIdx = Math.max(0, Math.min(7, parseInt(params.get('station'), 10) - 1));
+      initStationIdx = Math.max(0, Math.min(STATION_MANIFEST.length - 1, parseInt(params.get('station'), 10) - 1));
       initLocalSec = params.has('t') ? parseFloat(params.get('t')) : 2.0;
       manualOverrideFilmTime = stationOffsets[initStationIdx].start + initLocalSec;
     } else if (manualOverrideFilmTime !== null) {
@@ -318,6 +383,20 @@
     }
 
     await streamMgr.ensureStationLoaded(initStationIdx);
+    // If Shift was pressed/clicked while Station 1 was loading, upgrade to full 9-station lineup before entering!
+    if (useFullNineStations && STATION_MANIFEST !== FULL_NINE_MANIFEST) {
+      STATION_MANIFEST = FULL_NINE_MANIFEST;
+      streamMgr = createStationStreamManager({
+        renderer,
+        scene,
+        camera,
+        pelicanRig,
+        stationManifest: STATION_MANIFEST,
+      });
+      totalFilmDuration = streamMgr.totalFilmDuration;
+      stationOffsets = streamMgr.stationOffsets;
+      await streamMgr.ensureStationLoaded(initStationIdx);
+    }
     setLoaderProgress(100);
 
     let filmOffsetSec = stationOffsets[initStationIdx].start + initLocalSec;
@@ -329,16 +408,17 @@
     // =========================================================================
     // PROCEDURAL WEBAUDIO BRASS BICYCLE BELL + 8-STATION SYMPHONIC HARMONIC PAD
     // =========================================================================
-    const STATION_CHORDS = [
-      [146.83, 220.00, 293.66, 369.99, 440.00],
-      [174.61, 261.63, 329.63, 392.00, 493.88],
-      [196.00, 293.66, 329.63, 392.00, 493.88],
-      [130.81, 196.00, 293.66, 392.00, 523.25],
-      [233.08, 349.23, 440.00, 523.25, 587.33],
-      [220.00, 329.63, 392.00, 493.88, 523.25],
-      [155.56, 233.08, 293.66, 349.23, 466.16],
-      [261.63, 329.63, 392.00, 493.88, 587.33],
-    ];
+    const STATION_CHORDS = {
+      great_wall:     [146.83, 220.00, 293.66, 369.99, 440.00],
+      forbidden_city: [233.08, 349.23, 440.00, 523.25, 587.33],
+      zhangjiajie:    [174.61, 261.63, 329.63, 392.00, 493.88],
+      guilin:         [196.00, 293.66, 329.63, 392.00, 493.88],
+      potala:         [130.81, 196.00, 293.66, 392.00, 523.25],
+      dunhuang:       [220.00, 329.63, 392.00, 493.88, 523.25],
+      hongkong:       [164.81, 246.94, 329.63, 415.30, 493.88],
+      hongyadong:     [155.56, 233.08, 293.66, 349.23, 466.16],
+      shanghai:       [261.63, 329.63, 392.00, 493.88, 587.33],
+    };
 
     let audioCtx = null;
     let audioEnabled = false;
@@ -366,7 +446,8 @@
 
     function updateSymphonicChord(stationIdx) {
       if (!audioEnabled || !audioCtx || !padOscs.length) return;
-      const freqs = STATION_CHORDS[stationIdx] || STATION_CHORDS[0];
+      const slug = STATION_MANIFEST[stationIdx]?.slug;
+      const freqs = STATION_CHORDS[slug] || STATION_CHORDS.great_wall;
       const now = audioCtx.currentTime;
       padOscs.forEach((o, i) => {
         o.osc.frequency.cancelScheduledValues(now);
@@ -384,7 +465,8 @@
       lpFilter.frequency.value = 920;
       lpFilter.Q.value = 0.7;
       lpFilter.connect(padMasterGain).connect(audioCtx.destination);
-      const initFreqs = STATION_CHORDS[Math.max(0, currentActiveIdx)];
+      const initSlug = STATION_MANIFEST[Math.max(0, currentActiveIdx)]?.slug;
+      const initFreqs = STATION_CHORDS[initSlug] || STATION_CHORDS.great_wall;
       padOscs = initFreqs.map((f, i) => {
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
@@ -428,7 +510,7 @@
       padMasterGain.gain.setTargetAtTime(audioEnabled ? 0.16 : 0.0, now, 0.35);
       if (audioEnabled) {
         updateSymphonicChord(Math.max(0, currentActiveIdx));
-        ringBicycleBell(currentActiveIdx === 7);
+        ringBicycleBell(STATION_MANIFEST[Math.max(0, currentActiveIdx)]?.slug === 'shanghai');
       }
     });
 
@@ -563,7 +645,7 @@
       uiTitle.textContent = STATION_MANIFEST[sIdx]?.placeName || st.nameZh;
       if (currentActiveIdx !== -1) {
         updateSymphonicChord(sIdx);
-        ringBicycleBell(sIdx === 7);
+        ringBicycleBell(STATION_MANIFEST[sIdx]?.slug === 'shanghai');
       }
       currentActiveIdx = sIdx;
 
