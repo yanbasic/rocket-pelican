@@ -16,4 +16,4 @@ python3 -m http.server 8765
 
 ## Live Demo
 - GitHub Pages: https://yanbasic.github.io/rocket-pelican/
-- Google Cloud Run: https://pelican-over-china-996912212833.us-central1.run.app
+- Google Cloud Run: https://rocket-pelican-996912212833.us-central1.run.app
